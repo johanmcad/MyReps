@@ -397,6 +397,8 @@ function BuilderScreen({ session, onSave, onBack }) {
   const [showForm, setShowForm] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
   const [form, setForm] = useState({ name: '', sets: 3, workDuration: 30, restDuration: 15 })
+  const [editingId, setEditingId] = useState(null)
+  const [editForm, setEditForm] = useState(null)
 
   const addExercise = () => {
     if (!form.name.trim()) return
@@ -417,6 +419,25 @@ function BuilderScreen({ session, onSave, onBack }) {
   }
 
   const removeExercise = (id) => setExercises(exercises.filter((e) => e.id !== id))
+
+  const startEdit = (ex) => {
+    setEditingId(ex.id)
+    setEditForm({ name: ex.name, sets: ex.sets, workDuration: ex.workDuration, restDuration: ex.restDuration })
+  }
+
+  const saveEdit = () => {
+    if (!editForm.name.trim()) return
+    setExercises(exercises.map((ex) =>
+      ex.id === editingId ? { ...ex, ...editForm, name: editForm.name.trim() } : ex
+    ))
+    setEditingId(null)
+    setEditForm(null)
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setEditForm(null)
+  }
 
   const canSave = name.trim() && exercises.length > 0
 
@@ -488,24 +509,68 @@ function BuilderScreen({ session, onSave, onBack }) {
       {exercises.map((ex) => (
         <div key={ex.id} style={{
           background: colors.card,
-          border: `1px solid ${colors.cardBorder}`,
+          border: `1px solid ${editingId === ex.id ? colors.accent + '60' : colors.cardBorder}`,
           borderRadius: 12,
           padding: 16,
           marginBottom: 10,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
         }}>
-          <div>
-            <p style={{ fontFamily: fontBody, fontSize: 15, color: colors.text, fontWeight: 600 }}>{ex.name}</p>
-            <p style={{ fontFamily: fontBody, fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
-              {ex.sets} sets &middot; {ex.workDuration}s work &middot; {ex.restDuration}s rest
-            </p>
-          </div>
-          <button
-            onClick={() => removeExercise(ex.id)}
-            style={{ ...baseBtn, background: 'transparent', color: '#ff6b6b', padding: 8 }}
-          ><TrashIcon /></button>
+          {editingId === ex.id ? (
+            <div>
+              <input
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                style={{ ...inputStyle, marginBottom: 12 }}
+                autoFocus
+              />
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+                {[
+                  ['Sets', 'sets'],
+                  ['Work (s)', 'workDuration'],
+                  ['Rest (s)', 'restDuration'],
+                ].map(([label, key]) => (
+                  <div key={key}>
+                    <label style={{ fontFamily: fontBody, fontSize: 11, color: colors.textMuted, display: 'block', marginBottom: 4 }}>{label}</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={editForm[key]}
+                      onChange={(e) => setEditForm({ ...editForm, [key]: Math.max(1, parseInt(e.target.value) || 1) })}
+                      style={numberInputStyle}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={saveEdit} style={{
+                  ...baseBtn, flex: 1, padding: '10px 0',
+                  background: colors.accentGradient, color: '#fff',
+                }}>Save</button>
+                <button onClick={cancelEdit} style={{
+                  ...baseBtn, flex: 1, padding: '10px 0',
+                  background: '#2a2a3e', color: colors.textMuted,
+                }}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <p style={{ fontFamily: fontBody, fontSize: 15, color: colors.text, fontWeight: 600 }}>{ex.name}</p>
+                <p style={{ fontFamily: fontBody, fontSize: 12, color: colors.textMuted, marginTop: 4 }}>
+                  {ex.sets} sets &middot; {ex.workDuration}s work &middot; {ex.restDuration}s rest
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <button
+                  onClick={() => startEdit(ex)}
+                  style={{ ...baseBtn, background: 'transparent', color: colors.textMuted, padding: 8 }}
+                ><EditIcon /></button>
+                <button
+                  onClick={() => removeExercise(ex.id)}
+                  style={{ ...baseBtn, background: 'transparent', color: '#ff6b6b', padding: 8 }}
+                ><TrashIcon /></button>
+              </div>
+            </div>
+          )}
         </div>
       ))}
 

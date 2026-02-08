@@ -81,21 +81,36 @@ function getAudioCtx() {
   return audioCtxRef.current
 }
 
-function beep(count = 1, freq = 520) {
-  const ctx = getAudioCtx()
-  for (let i = 0; i < count; i++) {
+function glassTone(freq, time, ctx, dest, vol = 0.07) {
+  ;[1, 2.0, 3.8].forEach((h, i) => {
+    const v = vol * [1, 0.3, 0.1][i]
+    const dur = [0.8, 0.5, 0.3][i]
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
     osc.type = 'sine'
-    osc.frequency.value = freq
-    const t = ctx.currentTime + i * 0.25
-    gain.gain.setValueAtTime(0, t)
-    gain.gain.linearRampToValueAtTime(0.15, t + 0.04)
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25)
+    osc.frequency.value = freq * h
+    gain.gain.setValueAtTime(0, time)
+    gain.gain.linearRampToValueAtTime(v, time + 0.02)
+    gain.gain.exponentialRampToValueAtTime(0.001, time + dur)
     osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.start(t)
-    osc.stop(t + 0.25)
+    gain.connect(dest)
+    osc.start(time)
+    osc.stop(time + dur + 0.05)
+  })
+}
+
+function beep(count = 1) {
+  const ctx = getAudioCtx()
+  const t = ctx.currentTime
+  if (count === 1) {
+    glassTone(880, t, ctx, ctx.destination, 0.05)
+  } else if (count === 2) {
+    glassTone(988, t, ctx, ctx.destination, 0.06)
+    glassTone(1175, t + 0.15, ctx, ctx.destination, 0.07)
+  } else {
+    glassTone(988, t, ctx, ctx.destination, 0.05)
+    glassTone(1175, t + 0.15, ctx, ctx.destination, 0.06)
+    glassTone(1480, t + 0.32, ctx, ctx.destination, 0.07)
   }
 }
 
@@ -729,7 +744,7 @@ function PlayerScreen({ session, onQuit }) {
           return 0
         }
         // Warning beep at 3 seconds
-        if (t === 4) beep(1, 440)
+        if (t === 4) beep(1)
         return t - 1
       })
     }, 1000)
@@ -749,7 +764,7 @@ function PlayerScreen({ session, onQuit }) {
       const isLastSet = setIdx === currentEx.sets - 1
       const isLastExercise = exIdx === exercises.length - 1
       if (isLastSet && isLastExercise) {
-        beep(3, 620)
+        beep(3)
         setPhase('done')
       } else {
         beep(2)
@@ -782,7 +797,7 @@ function PlayerScreen({ session, onQuit }) {
 
   const handleNext = () => {
     if (exIdx >= exercises.length - 1) {
-      beep(3, 620)
+      beep(3)
       setPhase('done')
       return
     }
